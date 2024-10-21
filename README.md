@@ -1,4 +1,4 @@
-### TypeScript type -> Swift Object CLI 
+# TypeScript type -> Swift Object CLI 
 
 This project aims to find TypeScript type definitions like:
 
@@ -50,6 +50,28 @@ type MessagesSent =
 From inside a .ts file, and convert it to a Swift Object like:
 
 ```swift
+struct AppSpecificPartner: Codable {
+    let backURL: String
+    let navHeight: Int
+    let logoLongBlack: String
+    let logoLongWhite: String
+    let logoHeight: Int
+    let logoWidth: Int
+    let ourLogoOffsets: [Int]
+    let theirLogoOffsets: [Int]
+    let appearance: PublishingPartnerAppearance
+    let navBG: PublishingPartnerNavBackground
+    let navFG: PublishingPartnerNavForeground
+    let ourLogoFG: PublishingPartnerNavBackground
+    let ourLogoFGOverride: String?
+}
+
+enum MessagesSent {
+    case appContext(MessagesSentAppContext)
+    case startSub(MessagesSentStartSub)
+    case startGift(MessagesSentStartGift)
+}
+
 struct MessagesSentAppContext: Codable {
     let type: String
     let userStateID: String
@@ -77,35 +99,22 @@ struct MessagesSentStartGift: Codable {
     let impactClickID: String
 }
 
-enum MessagesSent {
-    case appContext(MessagesSentAppContext)
-    case startSub(MessagesSentStartSub)
-    case startGift(MessagesSentStartGift)
-}
 
-struct AppSpecificPartner: Codable {
-    let backURL: String
-    let navHeight: Int
-    let logoLongBlack: String
-    let logoLongWhite: String
-    let logoHeight: Int
-    let logoWidth: Int
-    let ourLogoOffsets: [Int]
-    let theirLogoOffsets: [Int]
-    let appearance: PublishingPartnerAppearance
-    let navBG: PublishingPartnerNavBackground
-    let navFG: PublishingPartnerNavForeground
-    let ourLogoFG: PublishingPartnerNavBackground
-    let ourLogoFGOverride: String?
-}
 
 ```
 
 OOTB the tool will be a CLI to generate this, but perhaps the end goal will also be to make a WASM build.
 
 
-### How to work on it
+## How to work on it
 
 ```bash
-git clone 
+git clone https://github.com/puzzmo-com/typescript-types-to-swift-objects.git
+cd typescript-types-to-swift-objects
+
+# Install dependencies
+cargo build
+
+# Run an example
+cargo run -- test/example.ts                                                                         
 ```
