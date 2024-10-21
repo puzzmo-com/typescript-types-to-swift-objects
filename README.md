@@ -116,5 +116,5 @@ cd typescript-types-to-swift-objects
 cargo build
 
 # Run an example
-cargo run -- test/example.ts                                                                         
+cargo run -- test/example.ts
 ```
