@@ -2,11 +2,11 @@
 
 use std::{io::Read, process::exit};
 use oxc_allocator::Allocator;
-use oxc_ast::ast::{Expression, TSType};
+use oxc_ast::ast::{Expression, TSSignature, TSType};
 use oxc_parser::{Parser, ParserReturn};
 use oxc_span::SourceType;
 use oxc_ast::{
-    ast::{Class, Function, TSImportType, Statement},
+    ast::{Class, Function, TSImportType, Statement, TSTypeLiteral},
     visit::walk,
     Visit,
 };
@@ -68,22 +68,40 @@ impl<'a> Visit<'a> for ASTPass {
             println!("union type");
             // Loop through the union types
             for type_ in union_type.types.iter() {
-                print_ts_subtype(it.id.name.to_string(), type_);
+                print_ts_sub_type(it.id.name.to_string(), type_);
             }
         }
 
         // It is an object type
-        if let TSType::TSTypeLiteral(object) = &it.type_annotation {
+        if let TSType::TSTypeLiteral(literal) = &it.type_annotation {
             println!("literal type");
-            
+            print_ts_root_type( literal);            
         }
-
 
         walk::walk_ts_type_alias_declaration(self, it);
     }
 }
 
-fn print_ts_subtype(name: String, ts_type: &TSType) {
+fn print_ts_root_type( ts_type: &TSTypeLiteral) {
+    // Create a mutable string which we append to
+    let mut swift_object = String::new();
+
+    // Loop through the members of the object type
+    for member in ts_type.members.iter() {
+        // println!("member: {:?}", member);
+        // If the member is a property
+       
+    }
+
+    // Remove the last comma from the string
+    swift_object.pop();
+    swift_object.pop();
+
+    // Print the string
+    println!("object: {:?}", swift_object);
+}
+
+fn print_ts_sub_type(root_name: String, ts_type: &TSType) {
 //     match ts_type {
 //         TSType::TSNumberKeyword => println!("number"),
 //         TSType::TSStringKeyword => println!("string"),
