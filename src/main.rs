@@ -1,16 +1,18 @@
+// https://playground.oxc.rs/#eNrNVstu2zoQ/RVGuAsb8GOvXDc3z+YCebhxgi7iwKCkkUyEIlWSsuOm/vcORdqSHbntsoYBiZzDOfPijN6DOAgDlhdSGfJOSg3nlPOIxq+9aiGFgTdD1iRVMifTQAGNzTSYiu2RxznkUAO0WXFI+kpYUAM2LiPO9JyJbEyVEaBOiwKooiJuHP5HAaer4bj8/j2X56VSIMyTBnWlaJbj+yBTtJh/4zsGfNB8Rxdn6ECmZCmSXqv8Sipw8gPkX0pQqyZdgxAt/xCXwWCI/1qyY2GMUTNwuUAPLnNmDKgeyekroGt+PSkjHStWGCbFjlLOoqE/7pDOFrMqgNyC1jQD/QAxgwUkZIRct5PPs8f72el4HOLKgDYh0Uah92R9TE6fHq9nt/cXlzeVFLWEyMNlxjBf5IfNH8tEWeBiTdaWaTjEDDNN7D/PS0MjDkfkQhIhDZkpyOUCZkQqMovnVGT4bubgGfGIsEsNJGXAEz3w+oAIatgCCC0KIgAS7WFGElmAQncR6t3EoE4KdDFlsU+gdXQqCLFl+vSArjg6uyXo4hpYNkevRZlHGC/cRP/kjRTZGccDTfRG8HXODEZiV9Cu5ytLzLy5KUt1g/v3aarB6JBgshIp+MpDnl8IuvzsFj2/+WIPosfs90fbTmLU/NUJf3WvfDzOPregdu6IB14dANaXpeHvIfCu1i34fgFKsWQbZKw1UXKOD0RCygQgviq4ndKe4JUhI6vph0u5/W3KFsPQj+vr5oTYtNTEYAH9f9FM6EZU7+5SO0Th3PgjUNhWmG1eeaNtmwxdt3R76G2rW9qgsr4uo9opXcYxRmSv1u0vpYy3bNM4xhSYCS+zfZE3v02EDQu7+zln8et+9H5tbMbSRgr+CmurToMGby3NqcCK6keMc4sLjtto3UksKm18i6q6tvbNFxvPx17+734f/tTpVuz/Gd2HN6wQ08fixxbZJxHEFMuQyJRkXEaU2946FfX7oJ21ZdcaitrthHH2ol4/RiJ4lHfVCW8aajg8b1rsb6FDl1r4QCT7RJ0uGX1yheJw77ZfPWCgWfWdMGp8V3TqgVnpJ9gCTalE8zuk41LayR1DuNMbaq6qIlLSaXAdjUaYd+fLNOh63U3wUWcaLCF6ZVi9dlYtmUjkstvF26rkEifTklzazCHsThKHJDihHQ51NpV13C6hmlCx6p4MHP5k4C2/piLhoPTJwE69ERq3bRIHCP2QxLlqDzbojve4PNU+kyUaFFIbH7JNDL2edc89n+uYvVRbKMd7EPQCGYTvgSqFfeiVMPQtCI0qoRfgHTKbdx3jzN4uVnkk+WZlcBDpVKo8CFPKNax7Ad5o7MOoEd+tls37FrrZiGUCGVhuXORMYJ+tRcIoya+4XFrTcLZEUqMJjmO9/gm/6s/z
+
 #![allow(clippy::print_stdout)]
 
-use std::{io::Read, process::exit};
-use oxc_allocator::Allocator;
-use oxc_ast::ast::{Expression, TSSignature, TSType};
+use std::{borrow::Borrow, io::Read};
+use oxc_allocator::{Allocator, CloneIn};
+use oxc_ast::{ast::{ self, PropertyKey, TSSignature, TSType, TSTypeAnnotation}, AstType};
 use oxc_parser::{Parser, ParserReturn};
 use oxc_span::SourceType;
 use oxc_ast::{
-    ast::{Class, Function, TSImportType, Statement, TSTypeLiteral},
+    ast::TSTypeLiteral,
     visit::walk,
     Visit,
 };
-use oxc_syntax::scope::ScopeFlags;
+
 
 
 fn main() {
@@ -28,7 +30,7 @@ fn main() {
     let source_type = SourceType::from_path(path).unwrap();
     let ParserReturn {
         program,  // AST
-        errors,   // Syntax errors
+        
         panicked, // Parser encountered an error it couldn't recover from
         ..
     }  = Parser::new(&allocator, &contents, source_type).parse();
@@ -90,6 +92,37 @@ fn print_ts_root_type( ts_type: &TSTypeLiteral) {
     for member in ts_type.members.iter() {
         // println!("member: {:?}", member);
         // If the member is a property
+
+        if let TSSignature::TSPropertySignature(property) = member {
+            // println!("property: {:?}", property);
+            // If the property is optional
+
+            // the key could be an expression, or identifier
+            let key = match &property.key {
+                PropertyKey::StaticIdentifier(id) => id.name.to_string(),
+                _ => todo!(),
+            };
+
+            let arena = Allocator::default();
+            let ts_type_annotation = property.type_annotation.expect("no type annotation").unbox().clone_in(&arena); // borrow()
+             
+            let ts_type = match ts_type_annotation {
+                TSTypeAnnotation { type_annotation, .. } => type_annotation,
+                _ => todo!(),
+            };
+
+            
+
+            // if property.optional {
+                // Append the property name and type to the string
+                swift_object.push_str(&format!("{:?}: {}?, ", key, "property.type_annotation"));
+
+            // } else {
+            //     // Append the property name and type to the string
+            //     swift_object.push_str(&format!("{}: {}, ", property.key.name, property.type_annotation));
+            // }
+        }
+
        
     }
 
@@ -101,7 +134,8 @@ fn print_ts_root_type( ts_type: &TSTypeLiteral) {
     println!("object: {:?}", swift_object);
 }
 
-fn print_ts_sub_type(root_name: String, ts_type: &TSType) {
+fn print_ts_sub_type(_root_name: String, _ts_type: &TSType) {
+
 //     match ts_type {
 //         TSType::TSNumberKeyword => println!("number"),
 //         TSType::TSStringKeyword => println!("string"),
