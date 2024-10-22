@@ -4,7 +4,7 @@
 
 use std::{borrow::Borrow, io::Read};
 use oxc_allocator::{Allocator, CloneIn};
-use oxc_ast::{ast::{ self, PropertyKey, TSSignature, TSType, TSTypeAnnotation}, AstType};
+use oxc_ast::{ast::{ self, PropertyKey, TSAnyKeyword, TSSignature, TSType, TSTypeAnnotation}, match_ts_type, AstType};
 use oxc_parser::{Parser, ParserReturn};
 use oxc_span::SourceType;
 use oxc_ast::{
@@ -30,7 +30,6 @@ fn main() {
     let source_type = SourceType::from_path(path).unwrap();
     let ParserReturn {
         program,  // AST
-        
         panicked, // Parser encountered an error it couldn't recover from
         ..
     }  = Parser::new(&allocator, &contents, source_type).parse();
@@ -52,7 +51,6 @@ fn main() {
 struct ASTPass {
     // a list of strings the names of the Swift objects we're going to generate
     swift_objects: Vec<String>,
-    
 }
 
 
@@ -77,26 +75,23 @@ impl<'a> Visit<'a> for ASTPass {
         // It is an object type
         if let TSType::TSTypeLiteral(literal) = &it.type_annotation {
             println!("literal type");
-            print_ts_root_type( literal);            
+            print_ts_root_type(it.id.name.to_string(), literal);            
         }
 
         walk::walk_ts_type_alias_declaration(self, it);
     }
 }
 
-fn print_ts_root_type( ts_type: &TSTypeLiteral) {
+fn print_ts_root_type(name: String, ts_type: &TSTypeLiteral) {
     // Create a mutable string which we append to
     let mut swift_object = String::new();
 
+    // struct AppSpecificPartner: Codable 
+    swift_object.push_str( &format!("struct {}: Codable {{\n  ", name));
+
     // Loop through the members of the object type
     for member in ts_type.members.iter() {
-        // println!("member: {:?}", member);
-        // If the member is a property
-
         if let TSSignature::TSPropertySignature(property) = member {
-            // println!("property: {:?}", property);
-            // If the property is optional
-
             // the key could be an expression, or identifier
             let key = match &property.key {
                 PropertyKey::StaticIdentifier(id) => id.name.to_string(),
@@ -104,34 +99,26 @@ fn print_ts_root_type( ts_type: &TSTypeLiteral) {
             };
 
             let arena = Allocator::default();
-            let ts_type_annotation = property.type_annotation.expect("no type annotation").unbox().clone_in(&arena); // borrow()
-             
-            let ts_type = match ts_type_annotation {
-                TSTypeAnnotation { type_annotation, .. } => type_annotation,
-                _ => todo!(),
+            let ts_type_annotation = match &property.type_annotation {
+                Some(ts_type_annotation) => ts_type_annotation,
+                None => todo!(),
             };
 
-            
-
-            // if property.optional {
-                // Append the property name and type to the string
-                swift_object.push_str(&format!("{:?}: {}?, ", key, "property.type_annotation"));
-
-            // } else {
-            //     // Append the property name and type to the string
-            //     swift_object.push_str(&format!("{}: {}, ", property.key.name, property.type_annotation));
-            // }
+            let our_type = ts_type_annotation.clone_in(&arena);
+            match our_type.unbox() {
+                TSTypeAnnotation { type_annotation: TSType::TSAnyKeyword(_), .. } => swift_object.push_str(&format!("let {}: AnyObject?", key)),
+                TSTypeAnnotation { type_annotation: TSType::TSStringKeyword(_), .. } => swift_object.push_str(&format!("let {}: String?", key)),
+                _ => ()
+            }
+            swift_object.push_str("\n");
         }
-
-       
     }
 
     // Remove the last comma from the string
-    swift_object.pop();
-    swift_object.pop();
+    swift_object.push('}');
 
     // Print the string
-    println!("object: {:?}", swift_object);
+    print!("object: {:?}", swift_object);
 }
 
 fn print_ts_sub_type(_root_name: String, _ts_type: &TSType) {
