@@ -1,5 +1,8 @@
 [package]
 name = "typescript-types-to-swift-objects"
+description = "Convert TypeScript types to Swift Codable objects"
+repository = "http://github.com/puzzmo-com/typescript-types-to-swift-objects"
+license = "MIT"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,3 +14,7 @@ oxc_ast = "0.32.0"
 oxc_parser = "0.32.0"
 oxc_span = "0.32.0"
 oxc_syntax = "0.32.0"
+wasm-bindgen = "0.2"
+
+[lib]
+crate-type = ["cdylib", "rlib"]

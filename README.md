@@ -117,4 +117,7 @@ cargo build
 
 # Run an example
 cargo run -- test/example.ts
+
+# Build an npm package for WASM
+wasm-pack build
 ```
