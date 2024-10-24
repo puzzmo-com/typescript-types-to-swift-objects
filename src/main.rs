@@ -2,29 +2,23 @@
 
 #![allow(clippy::print_stdout)]
 
-use std::io::Read;
 use oxc_allocator::{Allocator, CloneIn};
-use oxc_ast::ast::{  PropertyKey, TSSignature, TSType, TSTypeAnnotation};
+use oxc_ast::ast::{PropertyKey, TSSignature, TSType, TSTypeAnnotation};
+use oxc_ast::{ast::TSTypeLiteral, visit::walk, Visit};
 use oxc_parser::{Parser, ParserReturn};
 use oxc_span::SourceType;
-use oxc_ast::{
-    ast::TSTypeLiteral,
-    visit::walk,
-    Visit,
-};
-
-
+use std::io::Read;
 
 fn main() {
     let path = std::env::args().nth(1).expect("no path given");
 
-    println!("path: {:?}",  path);
+    println!("path: {:?}", path);
 
-    let mut file = std::fs::File::open
-    (&path).expect("could not open file");
+    let mut file = std::fs::File::open(&path).expect("could not open file");
 
     let mut contents = String::new();
-    file.read_to_string(&mut contents).expect("could not read file");
+    file.read_to_string(&mut contents)
+        .expect("could not read file");
 
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(path).unwrap();
@@ -32,7 +26,7 @@ fn main() {
         program,  // AST
         panicked, // Parser encountered an error it couldn't recover from
         ..
-    }  = Parser::new(&allocator, &contents, source_type).parse();
+    } = Parser::new(&allocator, &contents, source_type).parse();
 
     assert!(!program.body.is_empty());
     assert!(!panicked);
@@ -40,8 +34,8 @@ fn main() {
     let mut ast_pass = ASTPass::default();
     ast_pass.visit_program(&program);
 
+    println!("swift_objects: {:?}", ast_pass.swift_objects);
 }
-
 
 #[derive(Debug, Default)]
 struct ASTPass {
@@ -49,40 +43,37 @@ struct ASTPass {
     swift_objects: Vec<String>,
 }
 
-
 impl<'a> Visit<'a> for ASTPass {
     fn visit_ts_type_alias_declaration(&mut self, it: &oxc_ast::ast::TSTypeAliasDeclaration<'a>) {
         println!("");
         println!("");
 
         let name_ts = it.id.name.to_string();
-        self.swift_objects.push(name_ts);
 
         // If the annotation is a union type
         if let TSType::TSUnionType(union_type) = &it.type_annotation {
-            println!("union type");
             // Loop through the union types
             for type_ in union_type.types.iter() {
-                print_ts_sub_type(it.id.name.to_string(), type_);
+                create_ts_sub_type(name_ts.clone(), type_);
             }
         }
 
         // It is an object type
         if let TSType::TSTypeLiteral(literal) = &it.type_annotation {
-            println!("literal type");
-            print_ts_root_type(it.id.name.to_string(), literal);            
+            let codable = create_ts_root_type(name_ts, literal);
+            self.swift_objects.push(codable);
         }
 
         walk::walk_ts_type_alias_declaration(self, it);
     }
 }
 
-fn print_ts_root_type(name: String, ts_type: &TSTypeLiteral) {
+fn create_ts_root_type(name: String, ts_type: &TSTypeLiteral) -> std::string::String {
     // Create a mutable string which we append to
     let mut swift_object = String::new();
 
-    // struct AppSpecificPartner: Codable 
-    swift_object.push_str( &format!("struct {}: Codable {{\n  ", name));
+    // struct AppSpecificPartner: Codable
+    swift_object.push_str(&format!("struct {}: Codable {{\n  ", name));
 
     // Loop through the members of the object type
     for member in ts_type.members.iter() {
@@ -101,9 +92,15 @@ fn print_ts_root_type(name: String, ts_type: &TSTypeLiteral) {
 
             let our_type = ts_type_annotation.clone_in(&arena);
             match our_type.unbox() {
-                TSTypeAnnotation { type_annotation: TSType::TSAnyKeyword(_), .. } => swift_object.push_str(&format!("let {}: AnyObject?", key)),
-                TSTypeAnnotation { type_annotation: TSType::TSStringKeyword(_), .. } => swift_object.push_str(&format!("let {}: String?", key)),
-                _ => ()
+                TSTypeAnnotation {
+                    type_annotation: TSType::TSAnyKeyword(_),
+                    ..
+                } => swift_object.push_str(&format!("let {}: AnyObject?", key)),
+                TSTypeAnnotation {
+                    type_annotation: TSType::TSStringKeyword(_),
+                    ..
+                } => swift_object.push_str(&format!("let {}: String?", key)),
+                _ => (),
             }
             swift_object.push_str("\n");
         }
@@ -114,7 +111,8 @@ fn print_ts_root_type(name: String, ts_type: &TSTypeLiteral) {
 
     // Print the string
     print!("object: {:?}", swift_object);
+
+    return swift_object;
 }
 
-fn print_ts_sub_type(_root_name: String, _ts_type: &TSType) {
-}
+fn create_ts_sub_type(_root_name: String, _ts_type: &TSType) {}
