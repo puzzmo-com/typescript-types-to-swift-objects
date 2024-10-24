@@ -98,12 +98,32 @@ fn create_ts_root_type(name: String, ts_type: &TSTypeLiteral) -> std::string::St
                 TSTypeAnnotation {
                     type_annotation: TSType::TSAnyKeyword(_),
                     ..
-                } => swift_object.push_str(&format!("let {}: AnyObject?", key)),
+                } => swift_object.push_str(&format!("let {}: AnyObject", key)),
                 TSTypeAnnotation {
                     type_annotation: TSType::TSStringKeyword(_),
                     ..
-                } => swift_object.push_str(&format!("let {}: String?", key)),
+                } => swift_object.push_str(&format!("let {}: String", key)),
+
+                TSTypeAnnotation {
+                    type_annotation: TSType::TSNumberKeyword(_),
+                    ..
+                } => swift_object.push_str(&format!("let {}: Int", key)),
+
+                TSTypeAnnotation {
+                    type_annotation: TSType::TSBooleanKeyword(_),
+                    ..
+                } => swift_object.push_str(&format!("let {}: Bool", key)),
+                
+                TSTypeAnnotation {
+                    type_annotation: TSType::TSTypeOperatorType(_),
+                    ..
+                } => {
+                    swift_object.push_str(&format!("let {}: XXX ", key));
+                    // create_ts_sub_type(key, &our_type.unbox());
+                },
+
                 _ => (),
+               
             }
             swift_object.push_str("\n");
         }
